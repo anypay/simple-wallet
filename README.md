@@ -54,3 +54,22 @@ let payment = await client.sendPayment(wallet, paymentRequest)
 
 ```
 
+To test a local implementation of the protocol within
+a Hapi or Supertest-compatible webserver use TestClient as a
+drop-in replacement for Client.
+
+```
+import { app } from '../'
+
+import { TestClient } from 'anypay-simple-wallet'
+
+import * as supertest from 'supertest'
+
+const server = supertest(app)
+
+const client = new TestClient(server, `/i/3kbn9ids`)
+
+let { paymentOptions } = await client.getPaymentOptions()
+
+```
+
