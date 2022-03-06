@@ -2,7 +2,7 @@
 # Anypay Simple Wallet
 
 For building apps which control money and most importantly
-for testing anypay in production
+for testing anypay in production.
 
 ## Installation
 
@@ -30,6 +30,27 @@ let transaction = await wallet.buildTransaction([{
   address: "17du1ERGCG4Cwpm2N4GQHzKo8R3XVEJ33t",
   amount: 5000
 }])
+
+```
+
+All protocol methods are defined and available using the
+protocol client with built in validation.
+
+```
+
+import { Client, Wallet } from 'anypay-simple-wallet'
+
+let client = new Client('https://anypayx.com/i/3kbn9ids')
+
+let { paymentOptions } = await client.getPaymentOptions()
+
+let paymentOption = paymentOptions.filter(option => option.currency === 'BSV')[0]
+
+let paymentRequest = await client.selectPaymentOption(paymentOption)
+
+let wallet = Wallet.fromWIF(process.env.WIF)
+
+let payment = await client.sendPayment(wallet, paymentRequest)
 
 ```
 
