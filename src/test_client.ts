@@ -5,13 +5,15 @@ import * as protocol from './protocol'
 
 import { Wallet } from './wallet'
 
-import { broadcast } from './run'
-
-export class Client {
+export class TestClient {
 
   url: string;
 
-  constructor(url: string) {
+  supertest: any
+
+  constructor(supertest: any, url: string) {
+
+    this.supertest = supertest
 
     this.url = url
 
@@ -19,40 +21,48 @@ export class Client {
 
   async getPaymentOptions(): Promise<protocol.PaymentOptions> {
 
-    let { data } = await axios.get(this.url, {
+    let { result } = await this.supertest.inject({
+      method: 'GET',
+      url: this.url,
       headers: {
         'x-paypro-version': 2,
         'accept': 'application/payment-options'
       }
     })
 
-    return data
+    return result
 
   }
 
   async selectPaymentOption(params: protocol.SelectPaymentRequest): Promise<protocol.PaymentRequest> {
 
-    let { data } = await axios.post(this.url, params, {
+    let { result } = await this.supertest.inject({
+      method: "POST",
+      url: this.url,
+      payload: params,
       headers: {
         'x-paypro-version': 2,
         'content-type': 'application/payment-request'
       }
     })
 
-    return data
+    return result
 
   }
 
   async verifyPayment(params: protocol.PaymentVerificationRequest): Promise<protocol.PaymentVerification> {
 
-    let { data } = await axios.post(this.url, params, {
+    let { result } = await this.supertest.inject({
+      method: 'POST',
+      url: this.url, 
+      payload: params,
       headers: {
         'x-paypro-version': 2,
         'content-type': 'application/payment-verification'
       }
     })
 
-    return data
+    return result
 
   }
 
@@ -75,16 +85,17 @@ export class Client {
       transactions: [{ tx: transaction }]
     }
 
-    let { data } = await axios.post(this.url, payment, {
+    let { result } = await this.supertest({
+      method: "POST",
+      url: this.url,
+      payload: payment,
       headers: {
         'x-paypro-version': 2,
         'content-type': 'application/payment'
       }
     })
 
-    broadcast(transaction).then(console.log).catch(console.error)
-
-    return data
+    return result
 
   }
 

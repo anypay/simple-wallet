@@ -1,10 +1,9 @@
 
-import * as JsonPaymentProtocol from 'json-payment-protocol'
-
 export { Wallet } from './wallet'
 export { Networks } from './wallet'
-export { Currency } from './Currency'
-export { Currencies } from './Currency'
-export { Client } from './Client'
+export { Currency } from './currency'
+export { Currencies } from './currency'
+export { Client } from './client'
+export { TestClient } from './test_client'
 
-export { JsonPaymentProtocol }
+
