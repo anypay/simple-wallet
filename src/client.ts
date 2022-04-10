@@ -56,15 +56,13 @@ export class Client {
 
   }
 
-  async sendPayment(
+  async transmitPayment(
 
-    wallet: Wallet,
+    params: protocol.PaymentRequest,
 
-    params: protocol.PaymentRequest
+    transaction: string
 
   ): Promise<protocol.PaymentResponse> {
-
-    let transaction: any = await wallet.buildPayment(params.instructions[0].outputs)
 
     const payment: protocol.SendPayment = {
 
@@ -82,9 +80,26 @@ export class Client {
       }
     })
 
-    broadcast(transaction).then(console.log).catch(console.error)
+    //broadcast(transaction).then(console.log).catch(console.error)
+
+    console.log(data)
 
     return data
+
+  }
+
+  async sendPayment(
+
+    wallet: Wallet,
+
+    params: protocol.PaymentRequest
+
+  ): Promise<protocol.PaymentResponse> {
+
+    let transaction: any = await wallet.buildPayment(params.instructions[0].outputs)
+
+    return this.transmitPayment(params, transaction)
+
 
   }
 
