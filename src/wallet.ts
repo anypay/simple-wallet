@@ -1,203 +1,281 @@
+require('dotenv').config()
 
-import { Currency, Currencies } from './currency'
-
-import * as Run from 'run-sdk'
-
-import * as bsv from 'bsv'
-
-import axios from 'axios'
-
-const run = new Run()
-
-import { PrivateKey } from 'bsv'
+import { getRPC } from './rpc'
 
 import BigNumber from 'bignumber.js'
 
-import * as filepay from 'filepay'
+import { getBitcore, toSatoshis } from './bitcore'
 
-import * as protocol from './protocol'
+import { Invoice, Payment } from './invoice'
 
-export enum Networks {
-  BSV,
-  BCH,
-  BTC,
-  DASH,
-  LTC,
-  DOGE,
-  XMR,
-  XRP,
-  ETH,
-  SOL
-}
+import { Client } from './client'
 
-interface NewWallet {
+import { anypay } from './anypay'
 
-  privateKey: PrivateKey;
+import axios from 'axios'
 
-}
-
-export type BalanceLoading = any;
-
-import { Balance, convertBalance } from './balance'
-
-type integer = number;
-
-interface Unspent {
-  satoshis: integer;
-  script: string;
-  txid: string;
-  vout: integer;
-}
-
-interface Output {
-  address: string;
+export interface Balance {
+  asset: string;
   amount: number;
 }
 
 export class Wallet {
-  
-  privateKey: PrivateKey;
+  holdings: Holding[]
 
-  run: Run;
+  constructor(params: {
+    holdings: Holding[]
+  }) {
+    this.holdings = params.holdings
+  }
 
-  balance: number;
+  async balances() {
 
-  unspent: Unspent[];
+    let balances = await Promise.all(this.holdings.map(async holding => {
+ 
+      try {
 
-  constructor(newWallet: NewWallet) {
+        let balance = await holding.balance()
 
-    this.privateKey = newWallet.privateKey
+        return balance
 
-    this.getUnspentOutputs()
+      } catch(error) {
+
+        return null
+
+      }
+
+    }))
+
+    return balances.filter(balance => balance !== null)
 
   }
 
-  get address(): string {
+  async payInvoice(invoice_uid: string, asset:string): Promise<any> {
 
-    return this.privateKey.toAddress().toString()
-  }
+    // TODO: Get Actual Payment Request
 
-  static fromWIF(wif: string, network: Networks = Networks.BSV): Wallet {
+    let client = new Client(`https://api.anypayx.com/i/${invoice_uid}`)
 
-    switch(network) {
+    let options = await client.getPaymentOptions()
 
-      case Networks.BSV:
+    let paymentRequest = await client.selectPaymentOption({
+      chain: asset,
+      currency: asset
+    })
 
-        const privateKey = new PrivateKey(wif)
+    let { instructions } = paymentRequest
 
-        return new Wallet({ privateKey })
+    let wallet = this.asset(asset)
 
-      default:
+    let balance = await wallet.balance()
 
-        throw new UnsupportedNetworkError()
+    let bitcore = getBitcore(asset)
+
+    let privatekey = new bitcore.PrivateKey(wallet.privatekey)
+
+    var tx;
+
+    if (asset === 'LTC') {
+
+      let inputs = wallet.unspent.map(output => {
+
+        let satoshis = new BigNumber(output.amount).times(100000000).toNumber()
+
+        return {
+          txId: output.txid,
+          outputIndex: output.vout,
+          address: output.address,
+          script: output.redeemScript,
+          scriptPubKey: output.scriptPubKey,
+          satoshis
+        }
+      })
+
+      tx = new bitcore.Transaction()
+        .from(inputs)
+        .change(wallet.address)
+
+    } else {
+
+      tx = new bitcore.Transaction()
+        .from(wallet.unspent)
+        .change(wallet.address)
 
     }
 
+    for (let output of instructions[0].outputs) {
 
-  }
+      let address = bitcore.Address.fromString(output.address)
 
-  static create(network: Networks): Wallet {
+      let script = bitcore.Script.fromAddress(address)
 
-    const privateKey = new PrivateKey()
-
-    return new Wallet({ privateKey })
-
-  }
-
-  async getBalance(currency: Currency = Currencies.Satoshis): Promise<BalanceLoading | Balance> {
-
-    let outputs = await this.getUnspentOutputs()
-
-    this.balance = outputs.reduce((sum, output) => {
-
-      return sum.plus(output.satoshis)
-
-    }, new BigNumber(0)).toNumber()
-
-    var amount = this.balance
-
-    if (currency !== Currencies.Satoshis) {
-
-      let converted = await convertBalance({ amount, currency: Currencies.Satoshis }, currency)
-
-      amount = converted.amount
+      tx.addOutput(
+        bitcore.Transaction.Output({
+          satoshis: output.amount,
+          script: script.toHex()
+        })
+      )
 
     }
 
-    return {
+    tx.sign(privatekey)
 
-      currency,
+    let response = await client.transmitPayment(paymentRequest, tx.toString('hex'))
 
-      amount
+    return response
+
+  }
+
+  asset(asset: string) {
+    return this.holdings.filter(holding => holding.asset === asset)[0]
+  }
+
+  async newInvoice(newInvoice: { amount: number, currency: string }): Promise<Invoice> {
+    return new Invoice()
+  }
+
+
+  buildPayment(outputs: any[]) {
+
+  }
+
+  async receive(amount: {currency: string, value: number}, assets?: string[]): Promise<Invoice> {
+
+    let holdings = this.holdings
+
+    if (assets) {
+
+      holdings = holdings.filter(holding => {
+
+        let asset = assets.filter(asset => asset === holding.asset)[0]
+
+        return !!asset
+
+      })
 
     }
 
-  }
-
-  private async getUnspentOutputs() {
-
-    this.unspent = await run.blockchain.utxos(this.address)
-
-    return this.unspent
-
-  }
-
-  async buildPayment(outputs: Output[]) {
-
-    await this.getUnspentOutputs()
-
-    let inputs = this.unspent.map(utxo => {
+    let template = holdings.map(holding => {
 
       return {
-        value: utxo.satoshis,
-        script: utxo.script,
-        txid: utxo.txid,
-        outputIndex: utxo.vout
+        currency: holding.asset,
+        to: [{
+          address: holding.address,
+          currency: amount.currency,
+          amount: amount.value
+        }]
       }
 
     })
 
-    return new Promise((resolve, reject) => {
-
-      filepay.build({
-
-        pay: {
-
-          key: this.privateKey.toWIF(),
-
-          inputs,
-
-          to: outputs.map(output => {
-
-            return {
-
-              script: new bsv.Script(new bsv.Address(output.address)).toHex(),
-
-              value: output.amount
-
-            }
-
-          })
-        }
-      }, (error, transaction) => {
-
-        if (error) { return reject(error) }
-
-        resolve(transaction.serialize())
-
-      });
-
-    })
+    return anypay.request(template)
 
   }
 
+  async pay(uri: string, asset: string): Promise<Payment> {
+    return new Payment()
+  }
+
+  async getInvoice(uid: string): Promise<any> {
+
+    let { data } = await axios.get(`https://api.anypayx.com/invoices/${uid}`)
+
+    return data
+
+  }
 }
 
-export class UnsupportedNetworkError implements Error {
+export class Holding {
 
-  name = "UnsupportedWalletNetwork"
+  asset: string;
+  privatekey: string;
+  address: string;
+  unspent: any[];
 
-  message = "Wallet Network Not Supported"
+  constructor(params: {
+    asset: string,
+    privatekey: string,
+    address?: string,
+  }) {
+    this.asset = params.asset
+    this.privatekey = params.privatekey
+    this.address = params.address
+    this.unspent = []
+  }
+
+  async balance(): Promise<Balance> {
+
+    let rpc = getRPC(this.asset)
+
+    this.unspent = await rpc.listUnspent(this.address)
+
+    let amount = this.unspent.reduce((sum, output) => {
+
+      return sum.plus(output.amount)
+
+    }, new BigNumber(0)).toNumber()
+
+    return {
+      asset: this.asset,
+      amount
+    }
+
+  }
+}
+
+export async function loadWallet() {
+
+  let holdings: Holding[] = []
+
+  if (process.env.LTC_SIMPLE_WALLET_WIF) {
+    holdings.push(new Holding({
+      asset: 'LTC',
+      privatekey: process.env.LTC_SIMPLE_WALLET_WIF,
+      address: process.env.LTC_SIMPLE_WALLET_ADDRESS
+    }))
+  }
+
+  if (process.env.DOGE_SIMPLE_WALLET_WIF) {
+    holdings.push(new Holding({
+      asset: 'DOGE',
+      privatekey: process.env.DOGE_SIMPLE_WALLET_WIF,
+      address: process.env.DOGE_SIMPLE_WALLET_ADDRESS,
+    }))
+  }
+
+  if (process.env.DASH_SIMPLE_WALLET_WIF) {
+    holdings.push(new Holding({
+      asset: 'DASH',
+      privatekey: process.env.DASH_SIMPLE_WALLET_WIF,
+      address: process.env.DASH_SIMPLE_WALLET_ADDRESS
+    }))
+  }
+
+  if (process.env.BCH_SIMPLE_WALLET_WIF) {
+    holdings.push(new Holding({
+      asset: 'BCH',
+      privatekey: process.env.BCH_SIMPLE_WALLET_WIF,
+      address: process.env.BCH_SIMPLE_WALLET_ADDRESS
+    }))
+  }
+
+  if (process.env.BTC_SIMPLE_WALLET_WIF) {
+    holdings.push(new Holding({
+      asset: 'BTC',
+      privatekey: process.env.BTC_SIMPLE_WALLET_WIF,
+      address: process.env.BTC_SIMPLE_WALLET_ADDRESS
+    }))
+  }
+
+  if (process.env.BSV_SIMPLE_WALLET_WIF) {
+    holdings.push(new Holding({
+      asset: 'BSV',
+      privatekey: process.env.BSV_SIMPLE_WALLET_WIF,
+      address: process.env.BSV_SIMPLE_WALLET_ADDRESS
+    }))
+  }
+
+  return new Wallet({ holdings })
 
 }
 

@@ -12,5 +12,10 @@
       "emitDecoratorMetadata": true,
       "experimentalDecorators": true,
       "sourceMap": true
-   }
+  },
+  "exclude": [
+    "__tests__/",
+    "node_modules/",
+    "src/test"
+  ]
 }
