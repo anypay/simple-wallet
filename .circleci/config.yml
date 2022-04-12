@@ -10,7 +10,7 @@ jobs:
           command: npm install
       - run:
           name: Run Main Tests
-          command: npm run test:live:e2e
+          command: npm run test
       - run:
           name: Tag and Release New Version
           command: npx semantic-release
@@ -24,7 +24,7 @@ jobs:
           command: npm install
       - run:
           name: Run Main Tests
-          command: npm run test:live:e2e
+          command: npm run test
 
 workflows:
   version: 2

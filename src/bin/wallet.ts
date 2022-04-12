@@ -65,15 +65,15 @@ program
   })
 
 program
-  .command('receive <amount> <currency>')
-  .action(async (amount, currency) => {
+  .command('receive <value> <currency>')
+  .action(async (value, currency) => {
 
     try {
 
       let wallet = await loadWallet()
 
-      let invoice = await wallet.newInvoice({
-        currency, amount
+      let invoice = await wallet.receive({
+        currency, value
       })
 
       console.log({ invoice })
