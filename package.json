@@ -4,7 +4,8 @@
   "description": "Simple Wallet For Testing Anypay Payments",
   "main": "dist/index.js",
   "scripts": {
-    "test": "mocha --require=ts-node/register src/test/*_test.ts --timeout=10000"
+    "test": "echo 'no tests'",
+    "test:live:e2e": "echo 'no tests'"
   },
   "bin": {
     "simplewallet": "./src/bin/wallet.ts"
@@ -17,8 +18,10 @@
   "dependencies": {
     "@dashevo/dashcore-lib": "^0.19.30",
     "@types/mocha": "^9.1.0",
+    "anypay": "^0.1.0",
     "axios": "^0.26.0",
     "bignumber.js": "^9.0.2",
+    "bitcore-lib": "^8.25.25",
     "bsv": "^1.5.6",
     "chai": "^4.3.6",
     "chai-spies": "^1.0.0",
