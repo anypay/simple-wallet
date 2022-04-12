@@ -16,28 +16,39 @@ export interface UTXO {
 
 interface RpcOptions {
   url: string;
+  username?: string;
+  password?: string;
 }
 
 export class RpcClient {
 
   url: string;
+  username: string;
+  password: string
 
   constructor(params: RpcOptions) {
 
     this.url = params.url
+    this.username = params.username || process.env.BCH_RPC_USER
+    this.password = params.password || process.env.BCH_RPC_PASSWORD
   }
 
   async listUnspent(address: string): Promise<UTXO[]> {
 
     let method = 'listunspent'
 
-    let params = [0, 0, `["${address}"]`]
+    let params = [0, 9999999, [`${address}`]]
 
-    let { data } = await axios.post(this.url, params, {
-      headers: {}
+    let response = await axios.post(this.url, {method, params}, {
+
+      auth: {
+        username: this.username,
+        password: this.password
+      }
+
     })
 
-    return data
+    return response.data.result
 
   }
 

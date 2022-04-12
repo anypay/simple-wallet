@@ -80,10 +80,6 @@ export class Client {
       }
     })
 
-    //broadcast(transaction).then(console.log).catch(console.error)
-
-    console.log(data)
-
     return data
 
   }
