@@ -52,8 +52,6 @@ export class Wallet {
 
   async payInvoice(invoice_uid: string, asset:string): Promise<any> {
 
-    // TODO: Get Actual Payment Request
-
     let client = new Client(`https://api.anypayx.com/i/${invoice_uid}`)
 
     let options = await client.getPaymentOptions()
@@ -68,6 +66,8 @@ export class Wallet {
     let wallet = this.asset(asset)
 
     let balance = await wallet.balance()
+
+    console.log('BALANCE', balance)
 
     let bitcore = getBitcore(asset)
 
@@ -102,6 +102,9 @@ export class Wallet {
         .change(wallet.address)
 
     }
+
+    console.log('__UNSPENT__', wallet.unspent)
+    console.log('ADDRESS', wallet.address)
 
     for (let output of instructions[0].outputs) {
 
@@ -207,6 +210,12 @@ export class Holding {
 
     let rpc = getRPC(this.asset)
 
+    if (rpc['getBalance']) {
+
+      return rpc['getBalance'](this.address)
+
+    }
+
     this.unspent = await rpc.listUnspent(this.address)
 
     let amount = this.unspent.reduce((sum, output) => {
@@ -272,6 +281,14 @@ export async function loadWallet() {
       asset: 'BSV',
       privatekey: process.env.BSV_SIMPLE_WALLET_WIF,
       address: process.env.BSV_SIMPLE_WALLET_ADDRESS
+    }))
+  }
+
+  if (process.env.XMR_SIMPLE_WALLET_SEED) {
+    holdings.push(new Holding({
+      asset: 'XMR',
+      privatekey: process.env.XMR_SIMPLE_WALLET_SEED,
+      address: process.env.XMR_SIMPLE_WALLET_ADDRESS
     }))
   }
 

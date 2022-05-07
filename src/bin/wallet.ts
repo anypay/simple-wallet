@@ -30,9 +30,11 @@ program
 
     try {
 
-      let wallet = await loadWallet()
+      let wallets = await loadWallet()
 
-      let balance = await wallet.asset(asset).balance()
+      let wallet = wallets.asset(asset)
+
+      let balance = await wallet.balance()
 
       console.log({ balance })
 

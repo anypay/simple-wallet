@@ -6,6 +6,7 @@ import * as dash from './assets/dash/rpc'
 import * as ltc from './assets/ltc/rpc'
 import * as doge from './assets/doge/rpc'
 import * as btc from './assets/btc/rpc'
+import * as xmr from './assets/xmr'
 
 export function getRPC(currency) {
 
@@ -22,6 +23,8 @@ export function getRPC(currency) {
       return dash
     case 'DOGE':
       return doge
+    case 'XMR':
+      return xmr.rpc
     default:
       throw new Error('rpc for currency not found')
   }
