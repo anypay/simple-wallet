@@ -6,11 +6,11 @@ describe("Anypay Payment Protocol Live", () => {
 
   const coins = [
     'BTC',
-    /*'BSV',
+    'BSV',
     'BCH',
     'DASH',
     'DOGE',
-    'LTC'*/
+    'LTC'
   ]
 
   for (let coin of coins) {
