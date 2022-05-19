@@ -61,13 +61,30 @@ export class Wallet {
       currency: asset
     })
 
+    let payment = await this.buildPayment(paymentRequest, asset)
+
+    let response = await client.transmitPayment(paymentRequest, payment)
+
+    return response
+
+  }
+
+  asset(asset: string) {
+    return this.holdings.filter(holding => holding.asset === asset)[0]
+  }
+
+  async newInvoice(newInvoice: { amount: number, currency: string }): Promise<Invoice> {
+    return new Invoice()
+  }
+
+
+  async buildPayment(paymentRequest, asset) {
+
     let { instructions } = paymentRequest
 
     let wallet = this.asset(asset)
 
     let balance = await wallet.balance()
-
-    console.log('BALANCE', balance)
 
     let bitcore = getBitcore(asset)
 
@@ -103,9 +120,6 @@ export class Wallet {
 
     }
 
-    console.log('__UNSPENT__', wallet.unspent)
-    console.log('ADDRESS', wallet.address)
-
     for (let output of instructions[0].outputs) {
 
       let address = bitcore.Address.fromString(output.address)
@@ -123,22 +137,7 @@ export class Wallet {
 
     tx.sign(privatekey)
 
-    let response = await client.transmitPayment(paymentRequest, tx.toString('hex'))
-
-    return response
-
-  }
-
-  asset(asset: string) {
-    return this.holdings.filter(holding => holding.asset === asset)[0]
-  }
-
-  async newInvoice(newInvoice: { amount: number, currency: string }): Promise<Invoice> {
-    return new Invoice()
-  }
-
-
-  buildPayment(outputs: any[]) {
+    return tx.toString('hex')
 
   }
 
@@ -205,6 +204,9 @@ export class Holding {
     this.address = params.address
     this.unspent = []
   }
+  
+  async listUnspent() {
+  }
 
   async balance(): Promise<Balance> {
 
@@ -230,6 +232,7 @@ export class Holding {
     }
 
   }
+
 }
 
 export async function loadWallet() {

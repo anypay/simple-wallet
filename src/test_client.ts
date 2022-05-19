@@ -74,7 +74,7 @@ export class TestClient {
 
   ): Promise<protocol.PaymentResponse> {
 
-    let transaction: any = await wallet.buildPayment(params.instructions[0].outputs)
+    let transaction: any = await wallet.buildPayment(params.instructions[0].outputs, params.chain)
 
     const payment: protocol.SendPayment = {
 

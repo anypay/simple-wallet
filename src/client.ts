@@ -92,7 +92,7 @@ export class Client {
 
   ): Promise<protocol.PaymentResponse> {
 
-    let transaction: any = await wallet.buildPayment(params.instructions[0].outputs)
+    let transaction: any = await wallet.buildPayment(params.instructions[0].outputs, params.chain.toUpperCase())
 
     return this.transmitPayment(params, transaction)
 
