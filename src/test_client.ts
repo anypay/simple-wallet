@@ -5,17 +5,25 @@ import * as protocol from './protocol'
 
 import { Wallet } from './wallet'
 
+interface TestClientOptions {
+  headers?: any;
+}
+
 export class TestClient {
 
   url: string;
 
-  supertest: any
+  supertest: any;
 
-  constructor(supertest: any, url: string) {
+  headers: any;
+
+  constructor(supertest: any, url: string, options: TestClientOptions = {}) {
 
     this.supertest = supertest
 
     this.url = url
+
+    this.headers = options.headers || {}
 
   }
 
@@ -24,10 +32,10 @@ export class TestClient {
     let { result } = await this.supertest.inject({
       method: 'GET',
       url: this.url,
-      headers: {
+      headers: Object.assign(this.headers, {
         'x-paypro-version': 2,
         'accept': 'application/payment-options'
-      }
+      })
     })
 
     return result
@@ -40,10 +48,10 @@ export class TestClient {
       method: "POST",
       url: this.url,
       payload: params,
-      headers: {
+      headers: Object.assign(this.headers, {
         'x-paypro-version': 2,
         'content-type': 'application/payment-request'
-      }
+      })
     })
 
     return result
@@ -56,10 +64,10 @@ export class TestClient {
       method: 'POST',
       url: this.url, 
       payload: params,
-      headers: {
+      headers: Object.assign(this.headers, {
         'x-paypro-version': 2,
         'content-type': 'application/payment-verification'
-      }
+      })
     })
 
     return result
@@ -89,10 +97,10 @@ export class TestClient {
       method: "POST",
       url: this.url,
       payload: payment,
-      headers: {
+      headers: Object.assign(this.headers, {
         'x-paypro-version': 2,
         'content-type': 'application/payment'
-      }
+      })
     })
 
     return result
