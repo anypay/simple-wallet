@@ -10,7 +10,8 @@ describe("Anypay Payment Protocol Live", () => {
     'BCH',
     'DASH',
     'DOGE',
-    'LTC'
+    'LTC',
+    'XMR'
   ]
 
   for (let coin of coins) {
