@@ -14,6 +14,8 @@ import { anypay } from './anypay'
 
 import axios from 'axios'
 
+import { getRecommendedFees } from './mempool.space'
+
 export interface Balance {
   asset: string;
   amount: number;
@@ -50,11 +52,15 @@ export class Wallet {
 
   }
 
-  async payInvoice(invoice_uid: string, asset:string): Promise<any> {
 
-    let client = new Client(`https://api.anypayx.com/i/${invoice_uid}`)
+  async payInvoice(invoice_uid: string, asset:string, {transmit}:{transmit: boolean}={transmit:true}): Promise<any> {
 
-    let options = await client.getPaymentOptions()
+    return this.payUri(`https://api.anypayx.com/i/${invoice_uid}`, asset, { transmit })
+  }
+
+  async payUri(uri: string, asset:string, {transmit}:{transmit: boolean}={transmit:true}): Promise<any> {
+
+    let client = new Client(uri)
 
     let paymentRequest = await client.selectPaymentOption({
       chain: asset,
@@ -62,6 +68,8 @@ export class Wallet {
     })
 
     let payment = await this.buildPayment(paymentRequest, asset)
+
+    if (!transmit) return payment;
 
     let response = await client.transmitPayment(paymentRequest, payment)
 
@@ -90,7 +98,7 @@ export class Wallet {
 
     let privatekey = new bitcore.PrivateKey(wallet.privatekey)
 
-    var tx;
+    var tx, totalInput, totalOutput = 0;
 
     if (asset === 'LTC') {
 
@@ -108,17 +116,29 @@ export class Wallet {
         }
       })
 
+
       tx = new bitcore.Transaction()
         .from(inputs)
         .change(wallet.address)
 
     } else {
 
+
       tx = new bitcore.Transaction()
         .from(wallet.unspent)
         .change(wallet.address)
 
     }
+
+    totalInput = wallet.unspent.reduce((sum, input) => {
+
+      let satoshis = new BigNumber(input.amount).times(100000000).toNumber()
+
+      return sum.plus(satoshis)
+
+    }, new BigNumber(0)).toNumber()
+
+    console.log({ totalInput })
 
     for (let output of instructions[0].outputs) {
 
@@ -133,7 +153,29 @@ export class Wallet {
         })
       )
 
+      totalOutput += output.amount
+
     }
+
+    if (asset === 'BTC') {
+
+      let { fastestFee } = await getRecommendedFees()
+
+      const fee = fastestFee * tx._estimateSize()
+
+      console.log({ fastestFee, fee })
+
+      totalOutput  += fee;
+
+      tx.fee(fee)
+
+      let change = totalInput - totalOutput
+
+      console.log({ change })
+      
+    }
+
+    console.log({ totalOutput })
 
     tx.sign(privatekey)
 

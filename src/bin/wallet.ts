@@ -4,6 +4,8 @@ import { program } from 'commander'
 
 import { loadWallet } from '../wallet'
 
+import * as btc from 'bitcore-lib'
+
 program
   .command('balances')
   .action(async () => {
@@ -47,6 +49,26 @@ program
   })
 
 program
+  .command('payuri <uri> <asset>')
+  .action(async (invoice_uid, asset) => {
+
+    try {
+
+      let wallet = await loadWallet()
+
+      let payment = await wallet.payUri(invoice_uid, asset, { transmit: true })
+
+      console.log({ payment })
+
+    } catch(error) {
+
+      console.error(error)
+
+    }
+
+  })
+
+program
   .command('pay <invoice_uid> <asset>')
   .action(async (invoice_uid, asset) => {
 
@@ -55,6 +77,38 @@ program
       let wallet = await loadWallet()
 
       let payment = await wallet.payInvoice(invoice_uid, asset)
+
+      console.log({ payment })
+
+    } catch(error) {
+
+      console.error(error)
+
+    }
+
+  })
+
+program
+  .command('buildpayment <invoice_uid> <asset>')
+  .action(async (invoice_uid, asset) => {
+
+    try {
+
+      let wallet = await loadWallet()
+
+      let payment = await wallet.payInvoice(invoice_uid, asset, { transmit: false })
+
+      let tx = new btc.Transaction(payment)
+
+      for (let output of tx.outputs) {
+
+        let address = output.script.toAddress().toString()
+
+        let { satoshis } = output
+
+        console.log({ address, satoshis })
+
+      }
 
       console.log({ payment })
 
