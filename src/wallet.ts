@@ -14,6 +14,15 @@ import { anypay } from './anypay'
 
 import axios from 'axios'
 
+var assets = require('require-all')({
+  dirname  :  __dirname + '/assets',
+  recursive: true,
+  filter      :  /(.+)\.ts$/,
+  map: (name) => name.toUpperCase()
+});
+
+const XMR = require('./assets/xmr')
+
 import { getRecommendedFees } from './mempool.space'
 
 export interface Balance {
@@ -67,7 +76,19 @@ export class Wallet {
       currency: asset
     })
 
-    let payment = await this.buildPayment(paymentRequest, asset)
+    var payment;
+
+    if (asset === 'XMR') {
+
+      console.log('__XMR', paymentRequest)
+
+      payment = await XMR.buildPayment(paymentRequest)
+
+    } else {
+
+      payment = await this.buildPayment(paymentRequest, asset)
+
+    }
 
     if (!transmit) return payment;
 

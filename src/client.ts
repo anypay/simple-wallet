@@ -49,7 +49,8 @@ export class Client {
       headers: {
         'x-paypro-version': 2,
         'content-type': 'application/payment-verification'
-      }
+      },
+
     })
 
     return data
@@ -86,16 +87,18 @@ export class Client {
 
   async sendPayment(
 
-    wallet: Wallet,
-
-    params: protocol.PaymentRequest
+    params: protocol.Payment
 
   ): Promise<protocol.PaymentResponse> {
 
-    let transaction: any = await wallet.buildPayment(params.instructions[0].outputs, params.chain.toUpperCase())
+    let { data } = await axios.post(this.url, params, {
+      headers: {
+        'x-paypro-version': 2,
+        'content-type': 'application/payment'
+      }
+    })
 
-    return this.transmitPayment(params, transaction)
-
+    return data
 
   }
 

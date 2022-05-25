@@ -1,6 +1,8 @@
 
 import axios from 'axios'
 
+import BigNumber from 'bignumber.js'
+
 export interface UTXO {
   txid: string;
   vout: number;
@@ -27,7 +29,7 @@ export class RpcClient {
     this.url = params.url
   }
 
-  async getBalance(): Promise<number> {
+  async getBalance(): Promise<any> {
 
     const method = 'get_balance'
 
@@ -43,7 +45,11 @@ export class RpcClient {
       }
     })
 
-    return data.result
+    let { balance } = data.result
+
+    balance = new BigNumber(data.result.balance).dividedBy(1000000000000).toNumber()
+
+    return { asset: 'XMR', amount: balance }
 
   }
 

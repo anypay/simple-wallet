@@ -7,6 +7,9 @@
     "test": "jest",
     "test:live:e2e": "echo 'no tests'"
   },
+  "jest": {
+    "testTimeout": 20000
+  },
   "bin": {
     "simplewallet": "./src/bin/wallet.ts"
   },
@@ -30,6 +33,7 @@
     "joi": "^17.6.0",
     "litecore-lib": "^0.13.22",
     "nconf": "^0.11.3",
+    "payment-protocol": "^0.3.0",
     "require-all": "^3.0.0",
     "run-sdk": "^0.6.35"
   },

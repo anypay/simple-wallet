@@ -6,6 +6,8 @@ import { loadWallet } from '../wallet'
 
 import * as btc from 'bitcore-lib'
 
+import { Client } from '/Users/zyler/github/anypay/payment-protocol'
+
 program
   .command('balances')
   .action(async () => {
@@ -133,6 +135,31 @@ program
       })
 
       console.log({ invoice })
+
+    } catch(error) {
+
+      console.error(error)
+
+    }
+
+  })
+
+program
+  .command('paymentrequest <uri> <currency>')
+  .action(async (uri, currency) => {
+
+    let client = new Client(uri)
+
+    try {
+      
+      let { paymentOptions } = await client.getPaymentOptions()
+
+      let paymentRequest = await client.selectPaymentOption({
+        chain: currency,
+        currency: currency
+      })
+
+      console.log(JSON.stringify(paymentRequest))
 
     } catch(error) {
 
