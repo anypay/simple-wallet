@@ -10,6 +10,17 @@ for testing anypay in production.
 npm install --save anypay-simple-wallet
 ```
 
+## Environment Variables
+
+- BSV_PRIVATE_KEY
+- BTC_PRIVATE_KEY
+- BCH_PRIVATE_KEY
+- DASH_PRIVATE_KEY
+- LTC_PRIVATE_KEY
+- DOGE_PRIVATE_KEY
+- XRP_PRIVATE_KEY
+- XMR_SIMPLE_WALLET_SEED
+
 ### Usage
 
 The Wallet implements the JSON Payment Protocol V2 Spec

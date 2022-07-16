@@ -1,3 +1,4 @@
+require('dotenv').config()
 
 import axios from 'axios'
 
@@ -83,7 +84,9 @@ export async function listUnspent(address): Promise<UTXO[]> {
 
 }
 
-export async function getBalance(address): Promise<number> {
+import { Balance } from '../../wallet'
+
+export async function getBalance(address): Promise<Balance> {
 
   let rpc = new RpcClient({
     url: process.env.XMR_RPC_URL

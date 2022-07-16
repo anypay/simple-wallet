@@ -3,6 +3,8 @@ import axios from 'axios'
 
 import { Currency, Currencies } from './currency'
 
+import config from './config'
+
 import BigNumber from 'bignumber.js'
 
 export interface Balance {
@@ -15,7 +17,7 @@ export interface Balance {
 
 export async function convertBalance(balance: Balance, currency: Currency): Promise<Balance> {
 
-  const api = "https://api.anypayinc.com"
+  const api = config.get('API_BASE')
 
   if (balance.currency === Currencies.Satoshis) {
 

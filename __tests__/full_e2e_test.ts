@@ -5,12 +5,13 @@ import { loadWallet } from '../src/wallet'
 describe("Anypay Payment Protocol Live", () => {
 
   const coins = [
-    'BTC',
+    /*'BTC',
     'BSV',
     'BCH',
     'DASH',
     'DOGE',
     'LTC',
+    */
     'XMR'
   ]
 

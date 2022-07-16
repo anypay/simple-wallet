@@ -89,6 +89,8 @@ export interface PaymentVerification {
 export interface Transaction {
   tx: string;
   weightedSize?: number;
+  tx_key?: string;
+  tx_hash?: string;
 }
 
 export interface Payment {

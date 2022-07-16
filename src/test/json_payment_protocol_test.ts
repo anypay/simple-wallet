@@ -7,7 +7,9 @@ import axios from 'axios'
 
 import { wallet } from './utils'
 
-const base = !!process.env.ANYPAY_SIMPLE_WALLET_DEV ? 'http://localhost:8000' : 'https://api.anypayinc.com'
+import config from '../config'
+
+const base = !!process.env.ANYPAY_SIMPLE_WALLET_DEV ? 'http://localhost:8000' : config.get('API_BASE')
 
 describe('JSON Payment Protocol', () => {
 

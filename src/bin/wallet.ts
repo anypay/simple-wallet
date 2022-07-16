@@ -99,19 +99,6 @@ program
       let wallet = await loadWallet()
 
       let payment = await wallet.payInvoice(invoice_uid, asset, { transmit: false })
-
-      let tx = new btc.Transaction(payment)
-
-      for (let output of tx.outputs) {
-
-        let address = output.script.toAddress().toString()
-
-        let { satoshis } = output
-
-        console.log({ address, satoshis })
-
-      }
-
       console.log({ payment })
 
     } catch(error) {

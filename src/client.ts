@@ -61,18 +61,39 @@ export class Client {
 
     params: protocol.PaymentRequest,
 
-    transaction: string
+    transaction: string,
+
+    options?: any
 
   ): Promise<protocol.PaymentResponse> {
 
-    const payment: protocol.SendPayment = {
+    var payment: protocol.SendPayment;
 
-      chain: params.chain,
+    if (params.chain === 'XMR') {
 
-      currency: params.chain,
+      payment = {
 
-      transactions: [{ tx: transaction }]
+        chain: params.chain,
+
+        currency: params.chain,
+
+        transactions: [{ tx: transaction, tx_key: options.tx_key, tx_hash: options.tx_hash }]
+      }
+
+    } else {
+
+      payment = {
+
+        chain: params.chain,
+
+        currency: params.chain,
+
+        transactions: [{ tx: transaction }]
+      }
+
     }
+
+    console.log('__PAYMENT', payment)
 
     let { data } = await axios.post(this.url, payment, {
       headers: {

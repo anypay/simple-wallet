@@ -13,7 +13,7 @@ const assets = require('require-all')({
 })
 
 
-export function getBitcore(asset) {
+export function getBitcore(asset): any {
 
   let bitcore = assets[asset.toLowerCase()]['index.ts'].bitcore
 

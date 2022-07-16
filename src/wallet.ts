@@ -2,6 +2,8 @@ require('dotenv').config()
 
 import { getRPC } from './rpc'
 
+import config from './config'
+
 import BigNumber from 'bignumber.js'
 
 import { getBitcore, toSatoshis } from './bitcore'
@@ -25,27 +27,46 @@ const XMR = require('./assets/xmr')
 
 import { getRecommendedFees } from './mempool.space'
 
+interface PaymentTx {
+  tx_hex: string;
+  tx_hash?: string;
+  tx_key?: string;
+}
+
 export interface Balance {
   asset: string;
-  amount: number;
+  address: string;
+  value: number;
+  value_usd?: number;
+}
+
+interface LoadCard {
+  asset: string;
+  privatekey: string;
 }
 
 export class Wallet {
-  holdings: Holding[]
+  cards: Card[]
 
   constructor(params: {
-    holdings: Holding[]
+    cards: Card[]
   }) {
-    this.holdings = params.holdings
+    this.cards = params.cards
+  }
+
+  static async load(cards: LoadCard[]): Promise<Wallet> {
+
+    return new Wallet({ cards: cards.map(card => new Card(card)) })
+
   }
 
   async balances() {
 
-    let balances = await Promise.all(this.holdings.map(async holding => {
+    let balances = await Promise.all(this.cards.map(async card => {
  
       try {
 
-        let balance = await holding.balance()
+        let balance = await card.balance()
 
         return balance
 
@@ -62,12 +83,12 @@ export class Wallet {
   }
 
 
-  async payInvoice(invoice_uid: string, asset:string, {transmit}:{transmit: boolean}={transmit:true}): Promise<any> {
+  async payInvoice(invoice_uid: string, asset:string, {transmit}:{transmit: boolean}={transmit:true}): Promise<PaymentTx> {
 
-    return this.payUri(`https://api.anypayx.com/i/${invoice_uid}`, asset, { transmit })
+    return this.payUri(`${config.get('API_BASE')}/i/${invoice_uid}`, asset, { transmit })
   }
 
-  async payUri(uri: string, asset:string, {transmit}:{transmit: boolean}={transmit:true}): Promise<any> {
+  async payUri(uri: string, asset:string, {transmit}:{transmit: boolean}={transmit:true}): Promise<PaymentTx> {
 
     let client = new Client(uri)
 
@@ -78,11 +99,15 @@ export class Wallet {
 
     var payment;
 
+    var options: any;
+
     if (asset === 'XMR') {
 
-      console.log('__XMR', paymentRequest)
+      options = await XMR.buildPayment(paymentRequest)
 
-      payment = await XMR.buildPayment(paymentRequest)
+      console.log('__options', { options, transmit })
+
+      payment = options.tx_blob
 
     } else {
 
@@ -92,14 +117,14 @@ export class Wallet {
 
     if (!transmit) return payment;
 
-    let response = await client.transmitPayment(paymentRequest, payment)
+    let response = await client.transmitPayment(paymentRequest, payment, options)
 
-    return response
+    return payment
 
   }
 
   asset(asset: string) {
-    return this.holdings.filter(holding => holding.asset === asset)[0]
+    return this.cards.filter(card => card.asset === asset)[0]
   }
 
   async newInvoice(newInvoice: { amount: number, currency: string }): Promise<Invoice> {
@@ -206,13 +231,13 @@ export class Wallet {
 
   async receive(amount: {currency: string, value: number}, assets?: string[]): Promise<Invoice> {
 
-    let holdings = this.holdings
+    let cards = this.cards
 
     if (assets) {
 
-      holdings = holdings.filter(holding => {
+      cards = cards.filter(card => {
 
-        let asset = assets.filter(asset => asset === holding.asset)[0]
+        let asset = assets.filter(asset => asset === card.asset)[0]
 
         return !!asset
 
@@ -220,12 +245,12 @@ export class Wallet {
 
     }
 
-    let template = holdings.map(holding => {
+    let template = cards.map(card => {
 
       return {
-        currency: holding.asset,
+        currency: card.asset,
         to: [{
-          address: holding.address,
+          address: card.address,
           currency: amount.currency,
           amount: amount.value
         }]
@@ -243,14 +268,14 @@ export class Wallet {
 
   async getInvoice(uid: string): Promise<any> {
 
-    let { data } = await axios.get(`https://api.anypayx.com/invoices/${uid}`)
+    let { data } = await axios.get(`${config.get('API_BASE')}/invoices/${uid}`)
 
     return data
 
   }
 }
 
-export class Holding {
+export class Card {
 
   asset: string;
   privatekey: string;
@@ -259,13 +284,14 @@ export class Holding {
 
   constructor(params: {
     asset: string,
-    privatekey: string,
-    address?: string,
+    privatekey: string
   }) {
+    this.unspent = []
     this.asset = params.asset
     this.privatekey = params.privatekey
-    this.address = params.address
-    this.unspent = []
+
+    let bitcore = getBitcore(this.asset)
+    this.address = new bitcore.PrivateKey(this.privatekey).toAddress().toString();
   }
   
   async listUnspent() {
@@ -283,7 +309,7 @@ export class Holding {
 
     this.unspent = await rpc.listUnspent(this.address)
 
-    let amount = this.unspent.reduce((sum, output) => {
+    let value = this.unspent.reduce((sum, output) => {
 
       return sum.plus(output.amount)
 
@@ -291,74 +317,81 @@ export class Holding {
 
     return {
       asset: this.asset,
-      amount
+      value,
+      address: this.address
     }
 
   }
 
 }
 
-export async function loadWallet() {
+export async function loadWallet(loadCards: LoadCard[] = []) {
 
-  let holdings: Holding[] = []
+  let cards: Card[] = []
 
-  if (process.env.LTC_SIMPLE_WALLET_WIF) {
-    holdings.push(new Holding({
+  for (let loadCard of loadCards) {
+
+    cards.push(new Card(loadCard))
+
+  }
+
+  if (process.env.LTC_PRIVATE_KEY) {
+    cards.push(new Card({
       asset: 'LTC',
-      privatekey: process.env.LTC_SIMPLE_WALLET_WIF,
-      address: process.env.LTC_SIMPLE_WALLET_ADDRESS
+      privatekey: process.env.LTC_PRIVATE_KEY
     }))
   }
 
-  if (process.env.DOGE_SIMPLE_WALLET_WIF) {
-    holdings.push(new Holding({
+  if (process.env.DOGE_PRIVATE_KEY) {
+    cards.push(new Card({
       asset: 'DOGE',
-      privatekey: process.env.DOGE_SIMPLE_WALLET_WIF,
-      address: process.env.DOGE_SIMPLE_WALLET_ADDRESS,
+      privatekey: process.env.DOGE_PRIVATE_KEY
     }))
   }
 
-  if (process.env.DASH_SIMPLE_WALLET_WIF) {
-    holdings.push(new Holding({
+  if (process.env.DASH_PRIVATE_KEY) {
+    cards.push(new Card({
       asset: 'DASH',
-      privatekey: process.env.DASH_SIMPLE_WALLET_WIF,
-      address: process.env.DASH_SIMPLE_WALLET_ADDRESS
+      privatekey: process.env.DASH_PRIVATE_KEY
     }))
   }
 
-  if (process.env.BCH_SIMPLE_WALLET_WIF) {
-    holdings.push(new Holding({
+  if (process.env.BCH_PRIVATE_KEY) {
+    cards.push(new Card({
       asset: 'BCH',
-      privatekey: process.env.BCH_SIMPLE_WALLET_WIF,
-      address: process.env.BCH_SIMPLE_WALLET_ADDRESS
+      privatekey: process.env.BCH_PRIVATE_KEY
     }))
   }
 
-  if (process.env.BTC_SIMPLE_WALLET_WIF) {
-    holdings.push(new Holding({
+  if (process.env.BTC_PRIVATE_KEY) {
+    cards.push(new Card({
       asset: 'BTC',
-      privatekey: process.env.BTC_SIMPLE_WALLET_WIF,
-      address: process.env.BTC_SIMPLE_WALLET_ADDRESS
+      privatekey: process.env.BTC_PRIVATE_KEY
     }))
   }
 
-  if (process.env.BSV_SIMPLE_WALLET_WIF) {
-    holdings.push(new Holding({
+  if (process.env.BSV_PRIVATE_KEY) {
+    cards.push(new Card({
       asset: 'BSV',
-      privatekey: process.env.BSV_SIMPLE_WALLET_WIF,
-      address: process.env.BSV_SIMPLE_WALLET_ADDRESS
+      privatekey: process.env.BSV_PRIVATE_KEY
     }))
   }
 
   if (process.env.XMR_SIMPLE_WALLET_SEED) {
-    holdings.push(new Holding({
+    cards.push(new Card({
       asset: 'XMR',
-      privatekey: process.env.XMR_SIMPLE_WALLET_SEED,
-      address: process.env.XMR_SIMPLE_WALLET_ADDRESS
+      privatekey: process.env.XMR_SIMPLE_WALLET_SEED
     }))
   }
 
-  return new Wallet({ holdings })
+  if (process.env.XRP_PRIVATE_KEY) {
+    cards.push(new Card({
+      asset: 'XRP',
+      privatekey: process.env.XRP_PRIVATE_KEY
+    }))
+  }
+
+  return new Wallet({ cards })
 
 }
 

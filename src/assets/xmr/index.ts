@@ -34,11 +34,24 @@ export async function buildPayment(paymentRequest) {
 
   let destinations = result.instructions[0].outputs
 
-  let { tx_blob, tx_key, tx_hash } = await transfer(destinations)
+  try {
 
-  console.log({ tx_blob, tx_key, tx_hash })
+    const transferResult = await transfer(destinations)
 
-  return tx_blob
+    console.log({ transferResult })
+
+    let { tx_blob, tx_key, tx_hash } =  transferResult
+
+    console.log({ tx_blob, tx_key, tx_hash })
+
+    return { tx_blob, tx_key, tx_hash }
+  
+  } catch(error) {
+
+    console.error('xmr.transfer.error', error)
+
+    throw error
+  }
 
 }
 
@@ -56,7 +69,22 @@ export async function call(method: string, params: any): Promise<any> {
     }
   })
 
-  return data.result
+  if (data.error) {
+
+    console.error('xmr.rpc.call.error', data)
+
+    throw new Error(data.error)
+
+  }
+
+  if (data.result) {
+
+    return data.result
+
+  } else {
+
+    return data
+  }
 
 }
 
@@ -67,13 +95,17 @@ interface Destination {
 
 export async function transfer(destinations: Destination[]) {
 
-  return call('transfer', {
+  let result = await call('transfer', {
     get_tx_hex: true,
     get_tx_key: true,
     get_tx_metadata: true,
     do_not_relay: true,
     destinations
   })
+
+  console.log('transfer.result', result)
+
+  return result
 
 }
 

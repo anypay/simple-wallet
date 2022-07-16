@@ -65,4 +65,16 @@ export async function listUnspent(address): Promise<UTXO[]> {
 
 }
 
+import { Balance } from '../../wallet'
 
+export async function getBalance(address): Promise<Balance> {
+
+  const asset = 'BTC'
+
+  const { data } = await axios.get(`https://api.blockchair.com/bitcoin/dashboards/address/${address}`)
+
+  const { balance: value, balance_usd: value_usd } = data['data'][address]['address']
+
+  return { asset, address, value, value_usd }
+
+}
