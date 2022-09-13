@@ -40,8 +40,6 @@ describe("Anypay Payment Protocol Live", () => {
 
       let wallet = await loadWallet(cards)
 
-      console.log(cards)
-
       try {
 
         const paymentRequest = await wallet.receive({
