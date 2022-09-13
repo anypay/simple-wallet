@@ -117,11 +117,12 @@ program
 
       let wallet = await loadWallet()
 
-      let invoice = await wallet.receive({
+      /*let invoice = await wallet.receive({
         currency, value
       })
 
       console.log({ invoice })
+      */
 
     } catch(error) {
 
@@ -135,7 +136,7 @@ program
   .command('paymentrequest <uri> <currency>')
   .action(async (uri, currency) => {
 
-    let client = new Client(uri)
+    let client: any = new Client(uri)
 
     try {
       

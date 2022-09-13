@@ -54,28 +54,3 @@ export class RpcClient {
 
 }
 
-import { Balance } from '../../wallet'
-
-export async function getBalance(address): Promise<Balance> {
-
-  const asset = 'DASH'
-
-  const { data } = await axios.get(`https://api.blockchair.com/dash/dashboards/address/${address}`)
-
-  const { balance: value, balance_usd: value_usd } = data['data'][address]['address']
-
-  return { asset, address, value, value_usd }
-
-}
-
-export async function listUnspent(address): Promise<UTXO[]> {
-
-  let rpc = new RpcClient({
-    url: process.env.DASH_RPC_URL
-  })
-
-  return rpc.listUnspent(address)
-
-}
-
-

@@ -47,27 +47,29 @@ export class RpcClient {
 
 }
 
-export async function listUnspent(address): Promise<UTXO[]> {
+import { run, RunUtxo } from '../../run'
 
-  let rpc = new RpcClient({
-    url: process.env.BSV_RPC_URL
+export async function listUnspent(address): Promise<Utxo[]> {
+
+  const utxos: RunUtxo[]  = await run.blockchain.utxos(address)
+
+  return utxos.map(utxo => {
+    return {
+      txid: utxo.txid,
+      vout: utxo.vout,
+      value: utxo.satoshis,
+      scriptPubKey: utxo.script
+    }
   })
-
-  return rpc.listUnspent(address)
 
 }
 
+import { Utxo } from '../../wallet'
 
-import { Balance } from '../../wallet'
+export async function getBalance(address): Promise<number> {
 
-export async function getBalance(address): Promise<Balance> {
+  const utxos: Utxo[] = await listUnspent(address)
 
-  const asset = 'BSV'
-
-  const { data } = await axios.get(`https://api.blockchair.com/bitcoin-sv/dashboards/address/${address}`)
-
-  const { balance: value, balance_usd: value_usd } = data['data'][address]['address']
-
-  return { asset, address, value, value_usd }
+  return utxos.reduce((sum, {value}) => sum + value, 0)
 
 }

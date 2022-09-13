@@ -20,6 +20,15 @@ interface RpcOptions {
   password?: string;
 }
 
+
+import { Balance } from '../../wallet'
+
+import {
+  getBalance as blockchair_getBalance,
+  listUnspent as blockchair_listUnspent,
+  BlockchairUtxo
+} from '../../blockchair'
+
 export class RpcClient {
 
   url: string;
@@ -54,28 +63,5 @@ export class RpcClient {
 
 }
 
-import { Balance } from '../../wallet'
-
-export async function getBalance(address): Promise<Balance> {
-
-  const asset = 'BCH'
-
-  const { data } = await axios.get(`https://api.blockchair.com/bitcoin-cash/dashboards/address/${address}`)
-
-  const { balance: value, balance_usd: value_usd } = data['data'][address]['address']
-
-  return { asset, address, value, value_usd }
-
-}
-
-export async function listUnspent(address): Promise<UTXO[]> {
-
-  let rpc = new RpcClient({
-    url: process.env.BCH_RPC_URL
-  })
-
-  return rpc.listUnspent(address)
-
-}
 
 

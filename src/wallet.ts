@@ -6,15 +6,50 @@ import config from './config'
 
 import BigNumber from 'bignumber.js'
 
-import { getBitcore, toSatoshis } from './bitcore'
+import { getBitcore } from './bitcore'
 
-import { Invoice, Payment } from './invoice'
+import { Invoice } from './invoice'
 
 import { Client } from './client'
 
-import { anypay } from './anypay'
+import * as blockchair from './blockchair'
 
 import axios from 'axios'
+
+import { anypay } from './anypay'
+
+export class UnsufficientFundsError extends Error {
+  currency: string;
+  address: string;
+  paymentRequest: any;
+  balance: number;
+  required: number;
+
+  constructor({
+    currency,
+    address,
+    paymentRequest,
+    balance,
+    required
+  }: {
+    currency: string,
+    address: string,
+    paymentRequest: any,
+    balance: number,
+    required: number})
+  {
+    super()
+
+    this.currency = currency;
+    this.address = address;
+    this.balance = balance;
+    this.required = required;
+    this.paymentRequest = paymentRequest
+
+    this.message = `Insufficient ${currency} Balance of ${balance} in ${address}: ${required} required`
+  }
+
+}
 
 var assets = require('require-all')({
   dirname  :  __dirname + '/assets',
@@ -26,6 +61,15 @@ var assets = require('require-all')({
 const XMR = require('./assets/xmr')
 
 import { getRecommendedFees } from './mempool.space'
+import log from './log'
+import { convertBalance } from './balance'
+
+export interface Utxo {
+  txid: string;
+  vout: number;
+  value: number;
+  scriptPubKey?: string;
+}
 
 interface PaymentTx {
   tx_hex: string;
@@ -38,6 +82,7 @@ export interface Balance {
   address: string;
   value: number;
   value_usd?: number;
+  errors?: Error[];
 }
 
 interface LoadCard {
@@ -60,9 +105,11 @@ export class Wallet {
 
   }
 
-  async balances() {
+  async balances(): Promise<Balance[]> {
 
     let balances = await Promise.all(this.cards.map(async card => {
+
+      if (card.asset === 'DOGE') { return }
  
       try {
 
@@ -71,6 +118,8 @@ export class Wallet {
         return balance
 
       } catch(error) {
+
+        log.error('balances.error', error)
 
         return null
 
@@ -104,8 +153,6 @@ export class Wallet {
     if (asset === 'XMR') {
 
       options = await XMR.buildPayment(paymentRequest)
-
-      console.log('__options', { options, transmit })
 
       payment = options.tx_blob
 
@@ -148,7 +195,7 @@ export class Wallet {
 
     if (asset === 'LTC') {
 
-      let inputs = wallet.unspent.map(output => {
+      let inputs = wallet.unspent.map((output: any) => {
 
         let satoshis = new BigNumber(output.amount).times(100000000).toNumber()
 
@@ -169,22 +216,48 @@ export class Wallet {
 
     } else {
 
+      const unspent = await Promise.all(wallet.unspent.map(async utxo => {
 
-      tx = new bitcore.Transaction()
-        .from(wallet.unspent)
-        .change(wallet.address)
+        if (utxo.scriptPubKey) {
+          return utxo
+        }
+
+        const raw_transaction = await blockchair.getRawTx(wallet.asset, utxo.txid)
+
+        return Object.assign(utxo, {
+          scriptPubKey: raw_transaction['vout'][utxo.vout].scriptPubKey.hex,
+        })
+      }))
+
+      try {
+
+        tx = new bitcore.Transaction()
+          .from(unspent.map(utxo => {
+            const result = {
+              txId: utxo.txid,
+              outputIndex: utxo.vout,
+              satoshis: utxo.value,
+              scriptPubKey: utxo.scriptPubKey
+            }
+
+            return result
+          }))
+          .change(wallet.address)
+
+      } catch(error) {
+
+        log.error('buildPayment', error)
+      }
 
     }
 
     totalInput = wallet.unspent.reduce((sum, input) => {
 
-      let satoshis = new BigNumber(input.amount).times(100000000).toNumber()
+      let satoshis = new BigNumber(input.value).times(100000000).toNumber()
 
       return sum.plus(satoshis)
 
     }, new BigNumber(0)).toNumber()
-
-    console.log({ totalInput })
 
     for (let output of instructions[0].outputs) {
 
@@ -209,19 +282,25 @@ export class Wallet {
 
       const fee = fastestFee * tx._estimateSize()
 
-      console.log({ fastestFee, fee })
-
       totalOutput  += fee;
 
       tx.fee(fee)
 
       let change = totalInput - totalOutput
-
-      console.log({ change })
       
     }
 
-    console.log({ totalOutput })
+    if (totalOutput > totalInput) {
+
+      throw new UnsufficientFundsError({
+        currency: wallet.asset,
+        address: wallet.address,
+        paymentRequest,
+        balance: totalInput,
+        required: totalOutput
+      })
+
+    }
 
     tx.sign(privatekey)
 
@@ -231,42 +310,32 @@ export class Wallet {
 
   async receive(amount: {currency: string, value: number}, assets?: string[]): Promise<Invoice> {
 
-    let cards = this.cards
+      let cards = this.cards
 
-    if (assets) {
+       if (assets) {
 
-      cards = cards.filter(card => {
-
-        let asset = assets.filter(asset => asset === card.asset)[0]
-
-        return !!asset
-
-      })
-
-    }
-
+          cards = cards.filter(card => {
+            let asset = assets.filter(asset => asset === card.asset)[0]
+            return !!asset
+          })
+        }
+     
     let template = cards.map(card => {
-
-      return {
-        currency: card.asset,
-        to: [{
-          address: card.address,
-          currency: amount.currency,
-          amount: amount.value
-        }]
-      }
-
+        return {
+            currency: card.asset,
+            to: [{
+            address: card.address,
+            currency: amount.currency,
+            amount: amount.value
+            }]
+        }
     })
-
+     
     return anypay.request(template)
 
-  }
+}
 
-  async pay(uri: string, asset: string): Promise<Payment> {
-    return new Payment()
-  }
-
-  async getInvoice(uid: string): Promise<any> {
+async getInvoice(uid: string) {
 
     let { data } = await axios.get(`${config.get('API_BASE')}/invoices/${uid}`)
 
@@ -280,109 +349,191 @@ export class Card {
   asset: string;
   privatekey: string;
   address: string;
-  unspent: any[];
+  unspent: Utxo[];
 
   constructor(params: {
     asset: string,
-    privatekey: string
+    privatekey: string,
+    address?: string;
   }) {
     this.unspent = []
     this.asset = params.asset
     this.privatekey = params.privatekey
+    this.address = params.address
 
     let bitcore = getBitcore(this.asset)
-    this.address = new bitcore.PrivateKey(this.privatekey).toAddress().toString();
+
+    if (bitcore.PrivateKey) {
+      this.address = new bitcore.PrivateKey(this.privatekey).toAddress().toString();
+    }
+    
   }
   
-  async listUnspent() {
+  async getUnspent() {
+
+    const blockchairUnspent = await blockchair.listUnspent(this.asset, this.address)
+
+    this.unspent = blockchairUnspent
   }
 
   async balance(): Promise<Balance> {
 
+    const asset = this.asset
+
     let rpc = getRPC(this.asset)
+
+    var value;
+
+    const errors = []
 
     if (rpc['getBalance']) {
 
-      return rpc['getBalance'](this.address)
+      value = await rpc['getBalance'](this.address)
+
+    } else {
+
+      try {
+
+        value = await blockchair.getBalance(this.asset, this.address)
+
+      } catch(error) {
+
+        errors.push(error)
+
+        error.asset = this.asset
+        error.address = this.address
+
+        log.error('blockchair.getBalance.error', error)
+
+      }
+      
+    }
+
+
+
+    if (rpc['listUnspent']) {
+
+      this.unspent = await rpc['listUnspent'](this.address)
+
+    } else {
+
+      try {
+
+        this.unspent = await blockchair.listUnspent(this.asset, this.address)
+
+
+      } catch(error) {
+
+        errors.push(error)
+
+        error.asset = this.asset
+        error.address = this.address
+
+        log.error('blockchair.listUnspent.error', error)
+
+        this.unspent = []
+
+      }
+      
+    }
+
+    if (!value) {
+
+      value = this.unspent.reduce((sum, output) => {
+
+        return sum.plus(output.value)
+  
+      }, new BigNumber(0)).toNumber()
 
     }
 
-    this.unspent = await rpc.listUnspent(this.address)
+    if (errors.length > 0 && !value) {
 
-    let value = this.unspent.reduce((sum, output) => {
+      value = false
+    }
 
-      return sum.plus(output.amount)
-
-    }, new BigNumber(0)).toNumber()
+    const { amount: value_usd } = await convertBalance({
+      currency: this.asset,
+      amount: value / 100000000
+    }, 'USD')
 
     return {
       asset: this.asset,
-      value,
-      address: this.address
+      value: value,
+      value_usd,
+      address: this.address,
+      errors
     }
 
   }
 
 }
 
-export async function loadWallet(loadCards: LoadCard[] = []) {
+export async function loadWallet(loadCards?: LoadCard[]) {
 
   let cards: Card[] = []
 
-  for (let loadCard of loadCards) {
+  if (loadCards) {
 
-    cards.push(new Card(loadCard))
+    for (let loadCard of loadCards) {
+
+      cards.push(new Card(loadCard))
+
+    }
+    
+  } else {
+
+    if (process.env.LTC_PRIVATE_KEY) {
+      cards.push(new Card({
+        asset: 'LTC',
+        privatekey: process.env.LTC_PRIVATE_KEY
+      }))
+    }
+  
+    if (process.env.DOGE_PRIVATE_KEY) {
+      cards.push(new Card({
+        asset: 'DOGE',
+        privatekey: process.env.DOGE_PRIVATE_KEY
+      }))
+    }
+  
+    if (process.env.DASH_PRIVATE_KEY) {
+      cards.push(new Card({
+        asset: 'DASH',
+        privatekey: process.env.DASH_PRIVATE_KEY
+      }))
+    }
+  
+    if (process.env.BCH_PRIVATE_KEY) {
+      cards.push(new Card({
+        asset: 'BCH',
+        privatekey: process.env.BCH_PRIVATE_KEY
+      }))
+    }
+  
+    if (process.env.BTC_PRIVATE_KEY) {
+      cards.push(new Card({
+        asset: 'BTC',
+        privatekey: process.env.BTC_PRIVATE_KEY
+      }))
+    }
+  
+    if (process.env.BSV_PRIVATE_KEY) {
+      cards.push(new Card({
+        asset: 'BSV',
+        privatekey: process.env.BSV_PRIVATE_KEY
+      }))
+    }
 
   }
 
-  if (process.env.LTC_PRIVATE_KEY) {
-    cards.push(new Card({
-      asset: 'LTC',
-      privatekey: process.env.LTC_PRIVATE_KEY
-    }))
-  }
-
-  if (process.env.DOGE_PRIVATE_KEY) {
-    cards.push(new Card({
-      asset: 'DOGE',
-      privatekey: process.env.DOGE_PRIVATE_KEY
-    }))
-  }
-
-  if (process.env.DASH_PRIVATE_KEY) {
-    cards.push(new Card({
-      asset: 'DASH',
-      privatekey: process.env.DASH_PRIVATE_KEY
-    }))
-  }
-
-  if (process.env.BCH_PRIVATE_KEY) {
-    cards.push(new Card({
-      asset: 'BCH',
-      privatekey: process.env.BCH_PRIVATE_KEY
-    }))
-  }
-
-  if (process.env.BTC_PRIVATE_KEY) {
-    cards.push(new Card({
-      asset: 'BTC',
-      privatekey: process.env.BTC_PRIVATE_KEY
-    }))
-  }
-
-  if (process.env.BSV_PRIVATE_KEY) {
-    cards.push(new Card({
-      asset: 'BSV',
-      privatekey: process.env.BSV_PRIVATE_KEY
-    }))
-  }
-
-  if (process.env.XMR_SIMPLE_WALLET_SEED) {
+  /*if (process.env.XMR_SIMPLE_WALLET_SEED) {
     cards.push(new Card({
       asset: 'XMR',
       privatekey: process.env.XMR_SIMPLE_WALLET_SEED
     }))
   }
+  */
 
   if (process.env.XRP_PRIVATE_KEY) {
     cards.push(new Card({

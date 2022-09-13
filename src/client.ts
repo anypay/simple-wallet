@@ -3,10 +3,6 @@ import axios from 'axios'
 
 import * as protocol from './protocol'
 
-import { Wallet } from './wallet'
-
-import { broadcast } from './run'
-
 export class Client {
 
   url: string;
@@ -92,8 +88,6 @@ export class Client {
       }
 
     }
-
-    console.log('__PAYMENT', payment)
 
     let { data } = await axios.post(this.url, payment, {
       headers: {

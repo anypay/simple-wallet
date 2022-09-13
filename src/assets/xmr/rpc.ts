@@ -30,7 +30,7 @@ export class RpcClient {
     this.url = params.url
   }
 
-  async getBalance(): Promise<any> {
+  async getBalance(address): Promise<any> {
 
     const method = 'get_balance'
 
@@ -72,6 +72,30 @@ export class RpcClient {
 
   }
 
+  async sendRawTransaction({ tx_as_hex }: { tx_as_hex: string }): Promise<any> {
+
+    const method = 'send_raw_transaction'
+
+    const params = { tx_as_hex }
+
+    const { data } = await axios.post(this.url, params)
+
+    return data
+
+  }
+
+  async submitTransfer({ tx_as_hex }: { tx_as_hex: string }): Promise<any> {
+
+    const method = 'submit_transfer'
+
+    const params = { tx_as_hex }
+
+    const { data } = await axios.post(`http://67.223.119.106:18081`, params)
+
+    return data
+
+  }
+
 }
 
 export async function listUnspent(address): Promise<UTXO[]> {
@@ -92,7 +116,7 @@ export async function getBalance(address): Promise<Balance> {
     url: process.env.XMR_RPC_URL
   })
 
-  return rpc.getBalance()
+  return rpc.getBalance(address)
 
 }
 

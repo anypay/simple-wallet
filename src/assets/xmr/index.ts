@@ -23,7 +23,22 @@ import * as rpc from './rpc'
 
 export { rpc }
 
-export async function buildPayment(paymentRequest) {
+interface Instruction {
+  outputs: Destination[];
+}
+
+export interface PaymentRequest {
+  paymentUrl: string;
+  instructions: Instruction[];
+}
+
+export interface BuiltPayment {
+  tx_blob: string;
+  tx_key: string;
+  tx_hash: string;
+}
+
+export async function buildPaymentFromURL(paymentRequest: PaymentRequest): Promise<BuiltPayment> {
 
   let client = new Client(paymentRequest.paymentUrl)
 
@@ -32,17 +47,19 @@ export async function buildPayment(paymentRequest) {
     currency: 'XMR'
   })
 
-  let destinations = result.instructions[0].outputs
+  return buildPayment(result)
+
+}
+
+export async function buildPayment(paymentRequest: PaymentRequest): Promise<BuiltPayment> {
+
+  let destinations = paymentRequest.instructions[0].outputs
 
   try {
 
     const transferResult = await transfer(destinations)
 
-    console.log({ transferResult })
-
     let { tx_blob, tx_key, tx_hash } =  transferResult
-
-    console.log({ tx_blob, tx_key, tx_hash })
 
     return { tx_blob, tx_key, tx_hash }
   
@@ -100,10 +117,9 @@ export async function transfer(destinations: Destination[]) {
     get_tx_key: true,
     get_tx_metadata: true,
     do_not_relay: true,
+    unlock_time: 0,
     destinations
   })
-
-  console.log('transfer.result', result)
 
   return result
 

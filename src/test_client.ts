@@ -1,6 +1,4 @@
 
-import axios from 'axios'
-
 import * as protocol from './protocol'
 
 import { Wallet } from './wallet'
