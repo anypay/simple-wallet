@@ -1,6 +1,6 @@
 {
   "name": "anypay-simple-wallet",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Simple Wallet For P2P Electronic Payments",
   "main": "dist/index.js",
   "scripts": {

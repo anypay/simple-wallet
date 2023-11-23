@@ -47,19 +47,24 @@ export class RpcClient {
 
 }
 
-import { run, RunUtxo } from '../../run'
+export async function listUnspent(address: string): Promise<Utxo[]> {
 
-export async function listUnspent(address): Promise<Utxo[]> {
+  const { data } = await axios.get(`https://pow.co/api/v1/addresses/${this.address}/unspent`)
 
-  const utxos: RunUtxo[]  = await run.blockchain.utxos(address)
+  return data.unspent.map((unspent: any) => {
 
-  return utxos.map(utxo => {
     return {
-      txid: utxo.txid,
-      vout: utxo.vout,
-      value: utxo.satoshis,
-      scriptPubKey: utxo.script
+
+      script: unspent.script,
+
+      satoshis: unspent.satoshis,
+
+      txId: unspent.txId,
+
+      outputIndex: unspent.outputIndex
+
     }
+
   })
 
 }

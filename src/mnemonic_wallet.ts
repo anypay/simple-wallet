@@ -41,12 +41,8 @@ export class MnemonicWallet {
     }
   
     init() {
-
-      console.log('mnemonic', this.mnemonic)
   
       const seed = bip39.mnemonicToSeedSync(this.mnemonic).toString('hex')
-
-      console.log('seed', seed)
   
       //this.btchdprivatekey = btc.HDPrivateKey['fromSeed'](seed)
   
