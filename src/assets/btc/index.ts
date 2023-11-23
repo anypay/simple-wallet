@@ -1,6 +1,6 @@
 
 
-import * as bitcore from 'bitcore-lib';
+import * as bitcore from '@anypay/bitcore-lib';
 
 export { bitcore }
 

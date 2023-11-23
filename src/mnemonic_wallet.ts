@@ -11,7 +11,7 @@ import * as doge from 'dogecore-lib'
 
 import * as ltc from 'litecore-lib'
 
-import * as bch from 'bitcore-lib-cash'
+import * as bch from '@anypay/bitcore-lib-cash'
 
 import * as bsv from 'bsv'
 

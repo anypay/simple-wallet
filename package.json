@@ -1,6 +1,6 @@
 {
-  "name": "anypay-simple-wallet",
-  "version": "0.6.0",
+  "name": "@anypay/simple-wallet",
+  "version": "0.6.3",
   "description": "Simple Wallet For P2P Electronic Payments",
   "main": "dist/index.js",
   "scripts": {
@@ -16,18 +16,25 @@
     "simplewallet": "./src/bin/wallet.ts"
   },
   "keywords": [
-    "bitcoin", "dash", "payments", "wallet", "bitcoinsv", "bitcoincash", "litecoin", "xrp"
+    "bitcoin",
+    "dash",
+    "payments",
+    "wallet",
+    "bitcoinsv",
+    "bitcoincash",
+    "litecoin",
+    "xrp"
   ],
   "author": "Zyler",
   "license": "ISC",
   "dependencies": {
+    "@anypay/bitcore-lib": "^10.0.18",
+    "@anypay/bitcore-lib-cash": "^0.20.1",
     "@dashevo/dashcore-lib": "^0.19.30",
     "anypay": "^0.1.0",
     "axios": "^0.26.0",
     "bignumber.js": "^9.0.2",
     "bip39": "^3.0.4",
-    "bitcore-lib": "^8.25.25",
-    "bitcore-lib-cash": "^8.25.25",
     "bsv": "^1.5.6",
     "chai": "^4.3.6",
     "chai-spies": "^1.0.0",
