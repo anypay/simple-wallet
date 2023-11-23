@@ -1,6 +1,6 @@
 {
   "name": "anypay-simple-wallet",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Simple Wallet For P2P Electronic Payments",
   "main": "dist/index.js",
   "scripts": {
@@ -37,7 +37,6 @@
     "nconf": "^0.11.4",
     "payment-protocol": "^0.3.0",
     "require-all": "^3.0.0",
-    "run-sdk": "^0.6.35",
     "winston": "^3.8.2"
   },
   "devDependencies": {
