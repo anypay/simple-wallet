@@ -1,10 +1,11 @@
 {
   "name": "anypay-simple-wallet",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Simple Wallet For P2P Electronic Payments",
   "main": "dist/index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "build": "tsc"
   },
   "jest": {
     "testTimeout": 20000,
