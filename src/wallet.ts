@@ -16,7 +16,7 @@ import * as blockchair from './blockchair'
 
 import axios from 'axios'
 
-import { anypay } from './anypay'
+import anypay from './anypay'
 
 export class UnsufficientFundsError extends Error {
   currency: string;

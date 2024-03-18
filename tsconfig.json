@@ -11,6 +11,8 @@
       "outDir": "./dist",
       "emitDecoratorMetadata": true,
       "experimentalDecorators": true,
+      "declaration": true,
+      "declarationMap": true,
       "sourceMap": true
   },
   "exclude": [

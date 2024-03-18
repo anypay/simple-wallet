@@ -1,5 +1,5 @@
 
-import * as bitcore from '@anypay/bitcore-lib-cash';
+const bitcore = require('@anypay/bitcore-lib-cash')
 
 export { bitcore }
 

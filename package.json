@@ -1,8 +1,8 @@
 {
   "name": "@anypay/simple-wallet",
-  "version": "0.6.3",
+  "version": "0.6.5",
   "description": "Simple Wallet For P2P Electronic Payments",
-  "main": "dist/index.js",
+  "main": "src/index.ts",
   "scripts": {
     "test": "jest",
     "build": "tsc"
@@ -29,9 +29,9 @@
   "license": "ISC",
   "dependencies": {
     "@anypay/bitcore-lib": "^10.0.18",
-    "@anypay/bitcore-lib-cash": "^0.20.1",
+    "@anypay/bitcore-lib-cash": "^10.0.20",
     "@dashevo/dashcore-lib": "^0.19.30",
-    "anypay": "^0.1.0",
+    "anypay": "^0.7.0",
     "axios": "^0.26.0",
     "bignumber.js": "^9.0.2",
     "bip39": "^3.0.4",
