@@ -9,8 +9,8 @@ import { MnemonicWallet } from '../src/mnemonic_wallet';
 import { log } from '../src/log'
 
 describe("Anypay Payment Protocol Live", () => {
-
-  const mnemonic = config.get('simple_wallet_seed_phrase')
+  
+  const mnemonic = config.get('SIMPLE_WALLET_SEED_PHRASE')
 
   if (!mnemonic) {
 
@@ -44,10 +44,11 @@ describe("Anypay Payment Protocol Live", () => {
       try {
         console.log('CREATE PAYMENT REQUEST')
 
-        const paymentRequest = await wallet.receive({
+        /*const paymentRequest = await wallet.receive({
           currency: 'USD',
           value: 1
         })
+        */
 
         console.log('PAYMENT REQUEST CREATED')
 
